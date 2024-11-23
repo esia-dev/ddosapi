@@ -29,7 +29,7 @@ const settings = {
   target: "https://api.betabotz.eu.org/api/download/storyanime?apikey=",
   Rate: "500",
   threads: "100",
-  proxyFile: "proxy.txt"
+  proxyFile: "proxies.txt"
 }
 
 const cplist = [
